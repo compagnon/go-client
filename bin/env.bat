@@ -1,0 +1,2 @@
+set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\guillaume.compagnon\Downloads\idyllic-pact-205716-7fd2a33c7502.json
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\Users\guillaume.compagnon\Downloads\idyllic-pact-205716-7fd2a33c7502.json"
