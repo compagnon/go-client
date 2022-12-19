@@ -1,0 +1,13 @@
+runtime: go173
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /
+  script: home.app
+
+- url: /.*
+  script: not_found.app
+
+  env_variables:
+  GOOGLE_APPLICATION_CREDENTIALS: "/internal/credentials/application_default_credentials.json"

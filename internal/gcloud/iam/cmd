@@ -1,0 +1,8 @@
+Create a Key PEM
+
+openssl req -x509 -nodes -newkey rsa:2048 -days 365     -keyout internal/credentials/private_key.pem     -out internal/credentials/public_key.pem -subj "/CN=unused"
+
+UPLOAD AVEC LA COMMANDE
+
+gcloud iam service-accounts keys upload KEY_FILE \
+    --iam-account=SA_NAME@PROJECT_ID.iam.gserviceaccount.com

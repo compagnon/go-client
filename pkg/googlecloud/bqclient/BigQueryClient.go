@@ -59,6 +59,26 @@ func QueryBasic(w io.Writer, projectID string, sql string, location string) erro
 	return nil
 }
 
+// createDataset demonstrates creation of a new dataset using an explicit destination location.
+// See https://cloud.google.com/bigquery/docs/locations
+func CreateDataset(w io.Writer, projectID string, datasetID string, location string) error {
+	ctx := context.Background()
+
+	client, err := bigquery.NewClient(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("bigquery.NewClient: %v", err)
+	}
+	defer client.Close()
+
+	meta := &bigquery.DatasetMetadata{
+		Location: location, // See https://cloud.google.com/bigquery/docs/locations
+	}
+	if err := client.Dataset(datasetID).Create(ctx, meta); err != nil {
+		return err
+	}
+	return nil
+}
+
 // importCSVFromFile demonstrates loading data into a BigQuery table using a file on the local filesystem.
 func ImportCSVFromFile(projectID string, datasetID string, tableID string, filename string) error {
 	// projectID := "my-project-id"
