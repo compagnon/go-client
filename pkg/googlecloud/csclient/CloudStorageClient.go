@@ -125,7 +125,7 @@ func DownloadFileIntoMemory(w io.Writer, bucketName, object string) ([]byte, err
 }
 
 // listFiles lists objects within specified bucket.
-func ListFiles(w io.Writer, bucketName string, timeOutSeconds time.Duration) error {
+func ListFiles(w io.Writer, bucketName string, timeOut time.Duration) error {
 	// bucket := "bucket-name"
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -134,7 +134,7 @@ func ListFiles(w io.Writer, bucketName string, timeOutSeconds time.Duration) err
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*timeOutSeconds)
+	ctx, cancel := context.WithTimeout(ctx, timeOut)
 	defer cancel()
 
 	it := client.Bucket(bucketName).Objects(ctx, nil)
@@ -152,7 +152,7 @@ func ListFiles(w io.Writer, bucketName string, timeOutSeconds time.Duration) err
 }
 
 // listFilesWithPrefix lists objects using prefix and delimeter.
-func ListFilesWithPrefix(w io.Writer, bucketName, prefix, delim string, timeOutSeconds time.Duration) error {
+func ListFilesWithPrefix(w io.Writer, bucketName, prefix, delim string, timeOut time.Duration) error {
 	// bucket := "bucket-name"
 	// prefix := "/foo"
 	// delim := "_"
@@ -179,7 +179,7 @@ func ListFilesWithPrefix(w io.Writer, bucketName, prefix, delim string, timeOutS
 	//
 	// However, if you specify prefix="a/" and delim="/", you'll get back:
 	//   /a/1.txt
-	ctx, cancel := context.WithTimeout(ctx, time.Second*timeOutSeconds)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeOut))
 	defer cancel()
 
 	it := client.Bucket(bucketName).Objects(ctx, &storage.Query{
@@ -259,6 +259,108 @@ func DownloadDirectory(w io.Writer, bucketName string, bucket *storage.BucketHan
 
 	fmt.Fprintf(w, "Blob %v downloaded to local file %v\n", object, destDirName)
 
+	return nil
+}
+
+// uploadFile uploads an object.
+func UploadFile(w io.Writer, bucketName string, bucket *storage.BucketHandle, fromFileName string, object string) error {
+	// bucket := "bucket-name"
+	// object := "object-name"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %v", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	defer cancel()
+
+	if bucket == nil {
+		bucket = client.Bucket(bucketName)
+	}
+
+	err = uploadFile(w, ctx, bucket, fromFileName, object)
+	return err
+}
+
+// uploadFile uploads an object.
+func UploadDirectory(w io.Writer, bucketName string, bucket *storage.BucketHandle, fromDirName string, object string) error {
+
+	// bucket := "bucket-name"
+	// object := "object-name"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %v", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	defer cancel()
+
+	if bucket == nil {
+		bucket = client.Bucket(bucketName)
+	}
+
+	return uploadDir(w, ctx, bucket, fromDirName, object)
+}
+func uploadDir(w io.Writer, ctx context.Context, bucket *storage.BucketHandle, fromDirName string, object string) error {
+
+	files, err := ioutil.ReadDir(fromDirName)
+	if err != nil {
+		log.Fatalf("os.readDir: %v", err)
+		return err
+	}
+
+	for _, fi := range files {
+
+		if fi.IsDir() {
+			// recursive
+			err = uploadDir(w, ctx, bucket, fromDirName+string(os.PathSeparator)+fi.Name(), object+string(os.PathSeparator)+fi.Name())
+		} else { // file to upload
+			// Upload an object with storage.Writer.
+			err = uploadFile(w, ctx, bucket, fromDirName+string(os.PathSeparator)+fi.Name(), object+string(os.PathSeparator)+fi.Name())
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func uploadFile(w io.Writer, ctx context.Context, bucket *storage.BucketHandle, fromFileName string, object string) error {
+	// Open local file.
+	f, err := os.Open(fromFileName)
+	if err != nil {
+		return fmt.Errorf("os.Open: %v", err)
+	}
+	defer f.Close()
+
+	o := bucket.Object(object)
+
+	// Optional: set a generation-match precondition to avoid potential race
+	// conditions and data corruptions. The request to upload is aborted if the
+	// object's generation number does not match your precondition.
+	// For an object that does not yet exist, set the DoesNotExist precondition.
+	o = o.If(storage.Conditions{DoesNotExist: true})
+	// If the live object already exists in your bucket, set instead a
+	// generation-match precondition using the live object's generation number.
+	// attrs, err := o.Attrs(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("object.Attrs: %v", err)
+	// }
+	// o = o.If(storage.Conditions{GenerationMatch: attrs.Generation})
+
+	// Upload an object with storage.Writer.
+	wc := o.NewWriter(ctx)
+	if _, err = io.Copy(wc, f); err != nil {
+		return fmt.Errorf("io.Copy: %v", err)
+	}
+	if err := wc.Close(); err != nil {
+		return fmt.Errorf("Writer.Close: %v", err)
+	}
+	fmt.Fprintf(w, "Blob %v uploaded from local file %v.\n", object, fromFileName)
 	return nil
 }
 

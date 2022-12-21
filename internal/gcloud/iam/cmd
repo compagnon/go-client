@@ -1,3 +1,7 @@
+login on the project: / get OAuth token into gcloud
+
+gcloud auth login
+
 Create a Key PEM
 
 openssl req -x509 -nodes -newkey rsa:2048 -days 365     -keyout internal/credentials/private_key.pem     -out internal/credentials/public_key.pem -subj "/CN=unused"
@@ -6,3 +10,16 @@ UPLOAD AVEC LA COMMANDE
 
 gcloud iam service-accounts keys upload KEY_FILE \
     --iam-account=SA_NAME@PROJECT_ID.iam.gserviceaccount.com
+=> get the id of the key from Name
+
+keyAlgorithm: KEY_ALG_RSA_2048
+keyOrigin: USER_PROVIDED
+keyType: USER_MANAGED
+name: projects/idyllic-pact-205716/serviceAccounts/golang2@idyllic-pact-205716.iam.gserviceaccount.com/keys/e4fef7fa60f6264812f618d5afa0b9dc67426f50
+validAfterTime: '2022-12-19T17:33:45Z'
+validBeforeTime: '2023-12-19T17:33:45Z'
+
+
+gcloud iam service-accounts keys upload .\public_key.pem --iam-account=golang2@idyllic-pact-205716.iam.gserviceaccount.com
+
+gcloud iam service-accounts keys list --iam-account=golang2@idyllic-pact-205716.iam.gserviceaccount.com
